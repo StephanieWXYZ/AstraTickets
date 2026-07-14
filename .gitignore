@@ -1,0 +1,29 @@
+# Environment variables and local secrets
+.env
+.env.*
+!.env.example
+
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.venv/
+venv/
+*.db
+*.sqlite3
+
+# JavaScript and frontend builds
+node_modules/
+dist/
+.vite/
+
+# Local AI data
+chroma_data/
+*.onnx
+
+# Editors and operating systems
+.DS_Store
+.idea/
+.vscode/
