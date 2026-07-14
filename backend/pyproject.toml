@@ -9,6 +9,8 @@ description = "FastAPI backend for AstraTickets"
 requires-python = ">=3.11"
 dependencies = [
     "fastapi>=0.116,<0.139",
+    "pydantic-settings>=2.10,<3.0",
+    "sqlalchemy>=2.0,<3.0",
     "starlette>=0.46,<1.0",
     "uvicorn[standard]>=0.35,<1.0",
 ]
