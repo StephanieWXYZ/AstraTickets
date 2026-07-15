@@ -1,10 +1,14 @@
 from datetime import datetime, timezone
 from enum import Enum
+from typing import TYPE_CHECKING
 
 from sqlalchemy import Boolean, DateTime, Enum as SqlEnum, String
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base
+
+if TYPE_CHECKING:
+    from app.models.ticket import Ticket
 
 
 def utc_now() -> datetime:
@@ -42,4 +46,12 @@ class User(Base):
         DateTime(timezone=True),
         default=utc_now,
         onupdate=utc_now,
+    )
+    requested_tickets: Mapped[list["Ticket"]] = relationship(
+        back_populates="requester",
+        foreign_keys="Ticket.requester_id",
+    )
+    assigned_tickets: Mapped[list["Ticket"]] = relationship(
+        back_populates="assignee",
+        foreign_keys="Ticket.assignee_id",
     )
