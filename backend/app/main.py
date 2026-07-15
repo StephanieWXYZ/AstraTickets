@@ -1,9 +1,13 @@
 from fastapi import FastAPI
 
-app = FastAPI(title="AstraTickets API", version="0.1.0")
+from app.api.auth import router as auth_router
+from app.core.config import get_settings
+
+settings = get_settings()
+app = FastAPI(title=settings.app_name, version="0.1.0")
+app.include_router(auth_router, prefix="/api")
 
 
 @app.get("/health", tags=["system"])
 def health_check() -> dict[str, str]:
     return {"status": "ok"}
-

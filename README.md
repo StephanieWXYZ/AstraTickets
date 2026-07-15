@@ -22,6 +22,7 @@ Create a virtual environment and install the API with its development tools:
 ```bash
 python3 -m venv .venv
 .venv/bin/python -m pip install -e "backend[dev]"
+cp backend/.env.example backend/.env
 ```
 
 Start the development server:
@@ -34,6 +35,12 @@ cd backend
 
 The API is available at `http://127.0.0.1:8000`, with interactive
 documentation at `http://127.0.0.1:8000/docs`.
+
+Current authentication endpoints are available under `/api/auth`:
+
+- `POST /register` creates a customer account.
+- `POST /login` returns a JWT access token.
+- `GET /me` returns the authenticated user.
 
 Run the backend tests from the `backend` directory:
 
