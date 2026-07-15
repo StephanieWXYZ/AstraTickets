@@ -28,6 +28,7 @@ Start the development server:
 
 ```bash
 cd backend
+../.venv/bin/python -m alembic upgrade head
 ../.venv/bin/python -m uvicorn app.main:app --reload
 ```
 
