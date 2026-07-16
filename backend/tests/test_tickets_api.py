@@ -141,3 +141,142 @@ def test_agent_lists_and_filters_support_queue(
     assert response.json()["total"] == 1
     assert response.json()["limit"] == 1
     assert response.json()["items"][0]["title"] == "High priority ticket"
+
+
+def test_customer_reads_and_edits_own_open_ticket(client: TestClient) -> None:
+    token = register_and_login(client)
+    ticket = create_ticket(client, token, "Initial ticket title")
+
+    read_response = client.get(
+        f"/api/tickets/{ticket['id']}",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    update_response = client.patch(
+        f"/api/tickets/{ticket['id']}",
+        headers={"Authorization": f"Bearer {token}"},
+        json={"title": "Updated ticket title"},
+    )
+
+    assert read_response.status_code == 200
+    assert update_response.status_code == 200
+    assert update_response.json()["title"] == "Updated ticket title"
+
+
+def test_customer_cannot_access_another_customers_ticket(
+    client: TestClient,
+) -> None:
+    first_token = register_and_login(client, "first@example.com")
+    second_token = register_and_login(client, "second@example.com")
+    ticket = create_ticket(client, first_token, "Private customer ticket")
+
+    response = client.get(
+        f"/api/tickets/{ticket['id']}",
+        headers={"Authorization": f"Bearer {second_token}"},
+    )
+
+    assert response.status_code == 404
+
+
+def test_customer_cannot_change_ticket_status(client: TestClient) -> None:
+    token = register_and_login(client)
+    ticket = create_ticket(client, token, "Customer status request")
+
+    response = client.patch(
+        f"/api/tickets/{ticket['id']}",
+        headers={"Authorization": f"Bearer {token}"},
+        json={"status": "resolved"},
+    )
+
+    assert response.status_code == 403
+
+
+def test_agent_resolves_ticket_and_sets_resolution_time(
+    client: TestClient,
+    session_factory: sessionmaker[Session],
+) -> None:
+    customer_token = register_and_login(client)
+    ticket = create_ticket(client, customer_token, "Resolve this ticket")
+    agent_token = create_staff_token(session_factory)
+
+    response = client.patch(
+        f"/api/tickets/{ticket['id']}",
+        headers={"Authorization": f"Bearer {agent_token}"},
+        json={"status": "resolved", "category": "account_access"},
+    )
+
+    assert response.status_code == 200
+    assert response.json()["status"] == "resolved"
+    assert response.json()["category"] == "account_access"
+    assert response.json()["resolved_at"] is not None
+
+
+def test_closed_ticket_must_be_reopened_before_active_work(
+    client: TestClient,
+    session_factory: sessionmaker[Session],
+) -> None:
+    customer_token = register_and_login(client)
+    ticket = create_ticket(client, customer_token, "Closed workflow ticket")
+    agent_token = create_staff_token(session_factory)
+    close_response = client.patch(
+        f"/api/tickets/{ticket['id']}",
+        headers={"Authorization": f"Bearer {agent_token}"},
+        json={"status": "closed"},
+    )
+    assert close_response.status_code == 200
+
+    response = client.patch(
+        f"/api/tickets/{ticket['id']}",
+        headers={"Authorization": f"Bearer {agent_token}"},
+        json={"status": "in_progress"},
+    )
+
+    assert response.status_code == 409
+
+
+def test_customer_deletes_unassigned_open_ticket(client: TestClient) -> None:
+    token = register_and_login(client)
+    ticket = create_ticket(client, token, "Delete this ticket")
+
+    delete_response = client.delete(
+        f"/api/tickets/{ticket['id']}",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    read_response = client.get(
+        f"/api/tickets/{ticket['id']}",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+
+    assert delete_response.status_code == 204
+    assert read_response.status_code == 404
+
+
+def test_agent_cannot_delete_ticket(
+    client: TestClient,
+    session_factory: sessionmaker[Session],
+) -> None:
+    customer_token = register_and_login(client)
+    ticket = create_ticket(client, customer_token, "Permanent support record")
+    agent_token = create_staff_token(session_factory)
+
+    response = client.delete(
+        f"/api/tickets/{ticket['id']}",
+        headers={"Authorization": f"Bearer {agent_token}"},
+    )
+
+    assert response.status_code == 403
+
+
+def test_admin_deletes_ticket(
+    client: TestClient,
+    session_factory: sessionmaker[Session],
+) -> None:
+    customer_token = register_and_login(client)
+    ticket = create_ticket(client, customer_token, "Administrator cleanup")
+    admin_token = create_staff_token(session_factory, UserRole.ADMIN)
+
+    response = client.delete(
+        f"/api/tickets/{ticket['id']}",
+        headers={"Authorization": f"Bearer {admin_token}"},
+    )
+
+    assert response.status_code == 204
