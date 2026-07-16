@@ -42,6 +42,11 @@ Current authentication endpoints are available under `/api/auth`:
 - `POST /login` returns a JWT access token.
 - `GET /me` returns the authenticated user.
 
+Current ticket endpoints are available under `/api/tickets`:
+
+- `POST /api/tickets` creates a customer ticket.
+- `GET /api/tickets` lists the tickets visible to the authenticated user.
+
 Run the backend tests from the `backend` directory:
 
 ```bash

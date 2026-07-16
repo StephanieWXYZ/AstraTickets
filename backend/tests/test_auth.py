@@ -1,37 +1,9 @@
-from collections.abc import Generator
-from contextlib import contextmanager
-
-import pytest
 from fastapi.testclient import TestClient
-from sqlalchemy import create_engine, select
+from sqlalchemy import select
 from sqlalchemy.orm import Session, sessionmaker
-from sqlalchemy.pool import StaticPool
 
 from app.core.security import verify_password
-from app.db.base import Base
-from app.db.session import get_db
-from app.main import app
 from app.models import User
-
-
-@pytest.fixture
-def client() -> Generator[TestClient, None, None]:
-    engine = create_engine(
-        "sqlite://",
-        connect_args={"check_same_thread": False},
-        poolclass=StaticPool,
-    )
-    Base.metadata.create_all(engine)
-    testing_session = sessionmaker(bind=engine, expire_on_commit=False)
-
-    def override_get_db() -> Generator[Session, None, None]:
-        with testing_session() as session:
-            yield session
-
-    app.dependency_overrides[get_db] = override_get_db
-    with TestClient(app) as test_client:
-        yield test_client
-    app.dependency_overrides.clear()
 
 
 def register_user(client: TestClient) -> dict[str, object]:
@@ -47,19 +19,9 @@ def register_user(client: TestClient) -> dict[str, object]:
     return response.json()
 
 
-@contextmanager
-def database_session() -> Generator[Session, None, None]:
-    dependency = app.dependency_overrides[get_db]
-    session_generator = dependency()
-    session = next(session_generator)
-    try:
-        yield session
-    finally:
-        session_generator.close()
-
-
 def test_register_hashes_password_and_assigns_customer_role(
     client: TestClient,
+    session_factory: sessionmaker[Session],
 ) -> None:
     data = register_user(client)
 
@@ -67,7 +29,7 @@ def test_register_hashes_password_and_assigns_customer_role(
     assert data["role"] == "customer"
     assert "password" not in data
 
-    with database_session() as session:
+    with session_factory() as session:
         user = session.scalar(select(User))
         assert user is not None
         assert user.password_hash != "strong-password"
