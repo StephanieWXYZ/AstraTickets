@@ -64,6 +64,12 @@ class TicketUpdate(BaseModel):
         return self
 
 
+class TicketAssignment(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    assignee_id: int | None = Field(default=None, ge=1)
+
+
 class TicketPage(BaseModel):
     items: list[TicketRead]
     total: int

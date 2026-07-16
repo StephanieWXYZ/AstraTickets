@@ -7,8 +7,14 @@ from sqlalchemy.orm import Session
 
 from app.api.dependencies import CurrentUser
 from app.db.session import get_db
-from app.models import Ticket, TicketPriority, TicketStatus, UserRole
-from app.schemas import TicketCreate, TicketPage, TicketRead, TicketUpdate
+from app.models import Ticket, TicketPriority, TicketStatus, User, UserRole
+from app.schemas import (
+    TicketAssignment,
+    TicketCreate,
+    TicketPage,
+    TicketRead,
+    TicketUpdate,
+)
 
 router = APIRouter(prefix="/tickets", tags=["tickets"])
 
@@ -131,6 +137,14 @@ def update_ticket(
                 status_code=status.HTTP_409_CONFLICT,
                 detail="Assigned or active tickets cannot be edited by customers",
             )
+    elif (
+        current_user.role == UserRole.AGENT
+        and ticket.assignee_id != current_user.id
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Agents can update only tickets assigned to them",
+        )
 
     new_status = changes.get("status")
     if new_status is not None and new_status != ticket.status:
@@ -149,6 +163,67 @@ def update_ticket(
 
     for field_name, value in changes.items():
         setattr(ticket, field_name, value)
+
+    session.commit()
+    session.refresh(ticket)
+    return ticket
+
+
+@router.patch("/{ticket_id}/assignment", response_model=TicketRead)
+def assign_ticket(
+    ticket_id: int,
+    assignment: TicketAssignment,
+    current_user: CurrentUser,
+    session: Annotated[Session, Depends(get_db)],
+) -> Ticket:
+    ticket = get_visible_ticket(ticket_id, current_user, session)
+    if current_user.role == UserRole.CUSTOMER:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Customers cannot assign tickets",
+        )
+    if ticket.status in {TicketStatus.RESOLVED, TicketStatus.CLOSED}:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Resolved or closed tickets must be reopened before assignment",
+        )
+
+    if assignment.assignee_id is None:
+        if (
+            current_user.role == UserRole.AGENT
+            and ticket.assignee_id != current_user.id
+        ):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Agents can release only their own tickets",
+            )
+        ticket.assignee_id = None
+        if ticket.status == TicketStatus.IN_PROGRESS:
+            ticket.status = TicketStatus.OPEN
+    else:
+        assignee = session.get(User, assignment.assignee_id)
+        if assignee is None:
+            raise HTTPException(status_code=404, detail="Assignee not found")
+        if not assignee.is_active or assignee.role == UserRole.CUSTOMER:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Tickets can be assigned only to active staff",
+            )
+        if current_user.role == UserRole.AGENT:
+            if assignment.assignee_id != current_user.id:
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="Agents can assign tickets only to themselves",
+                )
+            if ticket.assignee_id not in {None, current_user.id}:
+                raise HTTPException(
+                    status_code=status.HTTP_409_CONFLICT,
+                    detail="Ticket is already assigned to another agent",
+                )
+
+        ticket.assignee_id = assignee.id
+        if ticket.status == TicketStatus.OPEN:
+            ticket.status = TicketStatus.IN_PROGRESS
 
     session.commit()
     session.refresh(ticket)

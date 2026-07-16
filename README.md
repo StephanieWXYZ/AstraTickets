@@ -48,6 +48,7 @@ Current ticket endpoints are available under `/api/tickets`:
 - `GET /api/tickets` lists the tickets visible to the authenticated user.
 - `GET /api/tickets/{ticket_id}` returns one visible ticket.
 - `PATCH /api/tickets/{ticket_id}` updates permitted ticket fields.
+- `PATCH /api/tickets/{ticket_id}/assignment` assigns or releases staff work.
 - `DELETE /api/tickets/{ticket_id}` deletes a ticket when the role and state allow it.
 
 Run the backend tests from the `backend` directory:

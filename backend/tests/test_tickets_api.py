@@ -1,7 +1,7 @@
 from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session, sessionmaker
 
-from app.core.security import create_access_token, hash_password
+from app.core.security import create_access_token, decode_access_token, hash_password
 from app.models import Ticket, TicketPriority, User, UserRole
 
 
@@ -44,10 +44,12 @@ def create_ticket(client: TestClient, token: str, title: str) -> dict[str, objec
 def create_staff_token(
     session_factory: sessionmaker[Session],
     role: UserRole = UserRole.AGENT,
+    email_prefix: str | None = None,
 ) -> str:
+    prefix = email_prefix or role.value
     with session_factory() as session:
         staff = User(
-            email=f"{role.value}@example.com",
+            email=f"{prefix}@example.com",
             password_hash=hash_password("strong-password"),
             full_name=f"Astra {role.value.title()}",
             role=role,
@@ -56,6 +58,16 @@ def create_staff_token(
         session.commit()
         session.refresh(staff)
         return create_access_token(staff.id)
+
+
+def claim_ticket(client: TestClient, token: str, ticket_id: object) -> dict[str, object]:
+    response = client.patch(
+        f"/api/tickets/{ticket_id}/assignment",
+        headers={"Authorization": f"Bearer {token}"},
+        json={"assignee_id": decode_access_token(token)},
+    )
+    assert response.status_code == 200
+    return response.json()
 
 
 def test_customer_creates_ticket(client: TestClient) -> None:
@@ -197,6 +209,7 @@ def test_agent_resolves_ticket_and_sets_resolution_time(
     customer_token = register_and_login(client)
     ticket = create_ticket(client, customer_token, "Resolve this ticket")
     agent_token = create_staff_token(session_factory)
+    claim_ticket(client, agent_token, ticket["id"])
 
     response = client.patch(
         f"/api/tickets/{ticket['id']}",
@@ -217,6 +230,7 @@ def test_closed_ticket_must_be_reopened_before_active_work(
     customer_token = register_and_login(client)
     ticket = create_ticket(client, customer_token, "Closed workflow ticket")
     agent_token = create_staff_token(session_factory)
+    claim_ticket(client, agent_token, ticket["id"])
     close_response = client.patch(
         f"/api/tickets/{ticket['id']}",
         headers={"Authorization": f"Bearer {agent_token}"},
@@ -280,3 +294,101 @@ def test_admin_deletes_ticket(
     )
 
     assert response.status_code == 204
+
+
+def test_agent_claims_and_releases_ticket(
+    client: TestClient,
+    session_factory: sessionmaker[Session],
+) -> None:
+    customer_token = register_and_login(client)
+    ticket = create_ticket(client, customer_token, "Claim this ticket")
+    agent_token = create_staff_token(session_factory)
+
+    claimed_ticket = claim_ticket(client, agent_token, ticket["id"])
+    release_response = client.patch(
+        f"/api/tickets/{ticket['id']}/assignment",
+        headers={"Authorization": f"Bearer {agent_token}"},
+        json={"assignee_id": None},
+    )
+
+    assert claimed_ticket["assignee_id"] == decode_access_token(agent_token)
+    assert claimed_ticket["status"] == "in_progress"
+    assert release_response.status_code == 200
+    assert release_response.json()["assignee_id"] is None
+    assert release_response.json()["status"] == "open"
+
+
+def test_agent_cannot_update_unassigned_ticket(
+    client: TestClient,
+    session_factory: sessionmaker[Session],
+) -> None:
+    customer_token = register_and_login(client)
+    ticket = create_ticket(client, customer_token, "Unclaimed ticket")
+    agent_token = create_staff_token(session_factory)
+
+    response = client.patch(
+        f"/api/tickets/{ticket['id']}",
+        headers={"Authorization": f"Bearer {agent_token}"},
+        json={"priority": "urgent"},
+    )
+
+    assert response.status_code == 403
+
+
+def test_agent_cannot_take_another_agents_ticket(
+    client: TestClient,
+    session_factory: sessionmaker[Session],
+) -> None:
+    customer_token = register_and_login(client)
+    ticket = create_ticket(client, customer_token, "Owned agent ticket")
+    first_agent_token = create_staff_token(session_factory, email_prefix="first-agent")
+    second_agent_token = create_staff_token(
+        session_factory,
+        email_prefix="second-agent",
+    )
+    claim_ticket(client, first_agent_token, ticket["id"])
+
+    response = client.patch(
+        f"/api/tickets/{ticket['id']}/assignment",
+        headers={"Authorization": f"Bearer {second_agent_token}"},
+        json={"assignee_id": decode_access_token(second_agent_token)},
+    )
+
+    assert response.status_code == 409
+
+
+def test_customer_cannot_assign_ticket(client: TestClient) -> None:
+    customer_token = register_and_login(client)
+    ticket = create_ticket(client, customer_token, "Customer assignment attempt")
+
+    response = client.patch(
+        f"/api/tickets/{ticket['id']}/assignment",
+        headers={"Authorization": f"Bearer {customer_token}"},
+        json={"assignee_id": 1},
+    )
+
+    assert response.status_code == 403
+
+
+def test_admin_reassigns_ticket_to_another_agent(
+    client: TestClient,
+    session_factory: sessionmaker[Session],
+) -> None:
+    customer_token = register_and_login(client)
+    ticket = create_ticket(client, customer_token, "Reassign this ticket")
+    first_agent_token = create_staff_token(session_factory, email_prefix="first-agent")
+    second_agent_token = create_staff_token(
+        session_factory,
+        email_prefix="second-agent",
+    )
+    admin_token = create_staff_token(session_factory, UserRole.ADMIN)
+    claim_ticket(client, first_agent_token, ticket["id"])
+
+    response = client.patch(
+        f"/api/tickets/{ticket['id']}/assignment",
+        headers={"Authorization": f"Bearer {admin_token}"},
+        json={"assignee_id": decode_access_token(second_agent_token)},
+    )
+
+    assert response.status_code == 200
+    assert response.json()["assignee_id"] == decode_access_token(second_agent_token)
