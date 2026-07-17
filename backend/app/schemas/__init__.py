@@ -6,12 +6,15 @@ from app.schemas.ticket import (
     TicketRead,
     TicketUpdate,
 )
+from app.schemas.ticket_reply import TicketReplyCreate, TicketReplyRead
 
 __all__ = [
     "TicketAssignment",
     "TicketCreate",
     "TicketPage",
     "TicketRead",
+    "TicketReplyCreate",
+    "TicketReplyRead",
     "TicketUpdate",
     "Token",
     "UserCreate",

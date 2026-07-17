@@ -1,11 +1,15 @@
 from datetime import datetime
 from enum import Enum
+from typing import TYPE_CHECKING
 
 from sqlalchemy import DateTime, Enum as SqlEnum, ForeignKey, String, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base
 from app.models.user import User, utc_now
+
+if TYPE_CHECKING:
+    from app.models.ticket_reply import TicketReply
 
 
 class TicketStatus(str, Enum):
@@ -82,4 +86,9 @@ class Ticket(Base):
     assignee: Mapped[User | None] = relationship(
         back_populates="assigned_tickets",
         foreign_keys=[assignee_id],
+    )
+    replies: Mapped[list["TicketReply"]] = relationship(
+        back_populates="ticket",
+        cascade="all, delete-orphan",
+        order_by="TicketReply.created_at, TicketReply.id",
     )

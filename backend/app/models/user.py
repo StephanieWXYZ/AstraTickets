@@ -9,6 +9,7 @@ from app.db.base import Base
 
 if TYPE_CHECKING:
     from app.models.ticket import Ticket
+    from app.models.ticket_reply import TicketReply
 
 
 def utc_now() -> datetime:
@@ -54,4 +55,7 @@ class User(Base):
     assigned_tickets: Mapped[list["Ticket"]] = relationship(
         back_populates="assignee",
         foreign_keys="Ticket.assignee_id",
+    )
+    ticket_replies: Mapped[list["TicketReply"]] = relationship(
+        back_populates="author",
     )

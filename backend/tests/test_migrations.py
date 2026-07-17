@@ -14,7 +14,9 @@ def test_migrations_upgrade_and_downgrade(tmp_path: Path) -> None:
 
     engine = create_engine(f"sqlite:///{database_path}")
     inspector = inspect(engine)
-    assert {"tickets", "users"}.issubset(inspector.get_table_names())
+    assert {"ticket_replies", "tickets", "users"}.issubset(
+        inspector.get_table_names()
+    )
     assert {column["name"] for column in inspector.get_columns("users")} == {
         "id",
         "email",
@@ -38,6 +40,21 @@ def test_migrations_upgrade_and_downgrade(tmp_path: Path) -> None:
         "updated_at",
         "resolved_at",
     }
+    assert {
+        column["name"] for column in inspector.get_columns("ticket_replies")
+    } == {
+        "id",
+        "ticket_id",
+        "author_id",
+        "content",
+        "created_at",
+    }
+
+    command.downgrade(config, "0002_create_tickets")
+
+    inspector = inspect(engine)
+    assert "ticket_replies" not in inspector.get_table_names()
+    assert "tickets" in inspector.get_table_names()
 
     command.downgrade(config, "0001_create_users")
 
