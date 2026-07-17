@@ -58,3 +58,16 @@ Run the backend tests from the `backend` directory:
 ```bash
 ../.venv/bin/python -m pytest
 ```
+
+## Frontend development
+
+Install the frontend dependencies and start Vite:
+
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+The frontend is available at `http://127.0.0.1:5173`. During development,
+Vite proxies `/api` requests to the FastAPI server on port `8000`.
