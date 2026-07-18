@@ -1,4 +1,11 @@
-import type { RegisterInput, TokenResponse, User } from "../types";
+import type {
+  CreateTicketInput,
+  RegisterInput,
+  Ticket,
+  TicketPage,
+  TokenResponse,
+  User,
+} from "../types";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "";
 
@@ -48,5 +55,29 @@ export function register(input: RegisterInput): Promise<User> {
 export function getCurrentUser(token: string): Promise<User> {
   return request<User>("/api/auth/me", {
     headers: { Authorization: `Bearer ${token}` },
+  });
+}
+
+function authorizationHeader(token: string): HeadersInit {
+  return { Authorization: `Bearer ${token}` };
+}
+
+export function listTickets(token: string): Promise<TicketPage> {
+  return request<TicketPage>("/api/tickets?limit=100", {
+    headers: authorizationHeader(token),
+  });
+}
+
+export function createTicket(
+  token: string,
+  input: CreateTicketInput,
+): Promise<Ticket> {
+  return request<Ticket>("/api/tickets", {
+    method: "POST",
+    headers: {
+      ...authorizationHeader(token),
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(input),
   });
 }

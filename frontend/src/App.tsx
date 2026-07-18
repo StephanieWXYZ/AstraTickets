@@ -4,6 +4,7 @@ import { ProtectedRoute } from "./auth/ProtectedRoute";
 import { DashboardPlaceholder } from "./components/DashboardPlaceholder";
 import { LoginPage } from "./pages/LoginPage";
 import { RegisterPage } from "./pages/RegisterPage";
+import { CustomerDashboardPage } from "./pages/CustomerDashboardPage";
 
 export default function App() {
   return (
@@ -15,7 +16,7 @@ export default function App() {
       <Route element={<ProtectedRoute allowedRoles={["customer"]} />}>
         <Route
           path="/customer/dashboard"
-          element={<DashboardPlaceholder audience="customer" />}
+          element={<CustomerDashboardPage />}
         />
       </Route>
 
