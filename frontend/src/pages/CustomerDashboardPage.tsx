@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState, type FormEvent } from "react";
+import { Link } from "react-router-dom";
 
 import { ApiError, createTicket, listTickets } from "../api/client";
 import { useAuth } from "../auth/AuthContext";
@@ -192,11 +193,16 @@ export function CustomerDashboardPage() {
                       {ticket.priority}
                     </span>
                   </div>
-                  <h3>{ticket.title}</h3>
+                  <h3>
+                    <Link to={`/customer/tickets/${ticket.id}`}>{ticket.title}</Link>
+                  </h3>
                   <p>{ticket.description}</p>
                   <footer>
                     <span>Ticket #{ticket.id}</span>
-                    <time dateTime={ticket.created_at}>{formatDate(ticket.created_at)}</time>
+                    <span className="ticket-footer-action">
+                      <time dateTime={ticket.created_at}>{formatDate(ticket.created_at)}</time>
+                      <Link to={`/customer/tickets/${ticket.id}`}>View conversation</Link>
+                    </span>
                   </footer>
                 </article>
               ))}

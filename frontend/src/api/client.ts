@@ -3,6 +3,7 @@ import type {
   RegisterInput,
   Ticket,
   TicketPage,
+  TicketReply,
   TokenResponse,
   User,
 } from "../types";
@@ -79,5 +80,35 @@ export function createTicket(
       "Content-Type": "application/json",
     },
     body: JSON.stringify(input),
+  });
+}
+
+export function getTicket(token: string, ticketId: number): Promise<Ticket> {
+  return request<Ticket>(`/api/tickets/${ticketId}`, {
+    headers: authorizationHeader(token),
+  });
+}
+
+export function listTicketReplies(
+  token: string,
+  ticketId: number,
+): Promise<TicketReply[]> {
+  return request<TicketReply[]>(`/api/tickets/${ticketId}/replies`, {
+    headers: authorizationHeader(token),
+  });
+}
+
+export function createTicketReply(
+  token: string,
+  ticketId: number,
+  content: string,
+): Promise<TicketReply> {
+  return request<TicketReply>(`/api/tickets/${ticketId}/replies`, {
+    method: "POST",
+    headers: {
+      ...authorizationHeader(token),
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ content }),
   });
 }

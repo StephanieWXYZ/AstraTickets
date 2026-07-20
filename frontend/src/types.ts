@@ -48,3 +48,18 @@ export interface CreateTicketInput {
   description: string;
   priority: TicketPriority;
 }
+
+export interface TicketReplyAuthor {
+  id: number;
+  full_name: string;
+  role: UserRole;
+}
+
+export interface TicketReply {
+  id: number;
+  ticket_id: number;
+  author_id: number;
+  content: string;
+  created_at: string;
+  author: TicketReplyAuthor;
+}

@@ -5,6 +5,7 @@ import { DashboardPlaceholder } from "./components/DashboardPlaceholder";
 import { LoginPage } from "./pages/LoginPage";
 import { RegisterPage } from "./pages/RegisterPage";
 import { CustomerDashboardPage } from "./pages/CustomerDashboardPage";
+import { CustomerTicketPage } from "./pages/CustomerTicketPage";
 
 export default function App() {
   return (
@@ -18,6 +19,7 @@ export default function App() {
           path="/customer/dashboard"
           element={<CustomerDashboardPage />}
         />
+        <Route path="/customer/tickets/:ticketId" element={<CustomerTicketPage />} />
       </Route>
 
       <Route element={<ProtectedRoute allowedRoles={["agent", "admin"]} />}>
