@@ -3,7 +3,9 @@ import type {
   RegisterInput,
   Ticket,
   TicketPage,
+  TicketPriority,
   TicketReply,
+  TicketStatus,
   TokenResponse,
   User,
 } from "../types";
@@ -63,8 +65,19 @@ function authorizationHeader(token: string): HeadersInit {
   return { Authorization: `Bearer ${token}` };
 }
 
-export function listTickets(token: string): Promise<TicketPage> {
-  return request<TicketPage>("/api/tickets?limit=100", {
+export interface TicketFilters {
+  status?: TicketStatus;
+  priority?: TicketPriority;
+}
+
+export function listTickets(
+  token: string,
+  filters: TicketFilters = {},
+): Promise<TicketPage> {
+  const query = new URLSearchParams({ limit: "100" });
+  if (filters.status) query.set("status", filters.status);
+  if (filters.priority) query.set("priority", filters.priority);
+  return request<TicketPage>(`/api/tickets?${query.toString()}`, {
     headers: authorizationHeader(token),
   });
 }
@@ -110,5 +123,20 @@ export function createTicketReply(
       "Content-Type": "application/json",
     },
     body: JSON.stringify({ content }),
+  });
+}
+
+export function assignTicket(
+  token: string,
+  ticketId: number,
+  assigneeId: number | null,
+): Promise<Ticket> {
+  return request<Ticket>(`/api/tickets/${ticketId}/assignment`, {
+    method: "PATCH",
+    headers: {
+      ...authorizationHeader(token),
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ assignee_id: assigneeId }),
   });
 }

@@ -1,11 +1,11 @@
 import { Navigate, Route, Routes } from "react-router-dom";
 
 import { ProtectedRoute } from "./auth/ProtectedRoute";
-import { DashboardPlaceholder } from "./components/DashboardPlaceholder";
-import { LoginPage } from "./pages/LoginPage";
-import { RegisterPage } from "./pages/RegisterPage";
 import { CustomerDashboardPage } from "./pages/CustomerDashboardPage";
 import { CustomerTicketPage } from "./pages/CustomerTicketPage";
+import { LoginPage } from "./pages/LoginPage";
+import { RegisterPage } from "./pages/RegisterPage";
+import { StaffDashboardPage } from "./pages/StaffDashboardPage";
 
 export default function App() {
   return (
@@ -25,7 +25,7 @@ export default function App() {
       <Route element={<ProtectedRoute allowedRoles={["agent", "admin"]} />}>
         <Route
           path="/staff/dashboard"
-          element={<DashboardPlaceholder audience="staff" />}
+          element={<StaffDashboardPage />}
         />
       </Route>
 
