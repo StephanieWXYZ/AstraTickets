@@ -140,3 +140,18 @@ export function assignTicket(
     body: JSON.stringify({ assignee_id: assigneeId }),
   });
 }
+
+export function updateTicketStatus(
+  token: string,
+  ticketId: number,
+  status: TicketStatus,
+): Promise<Ticket> {
+  return request<Ticket>(`/api/tickets/${ticketId}`, {
+    method: "PATCH",
+    headers: {
+      ...authorizationHeader(token),
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ status }),
+  });
+}

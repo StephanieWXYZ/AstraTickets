@@ -6,6 +6,7 @@ import { CustomerTicketPage } from "./pages/CustomerTicketPage";
 import { LoginPage } from "./pages/LoginPage";
 import { RegisterPage } from "./pages/RegisterPage";
 import { StaffDashboardPage } from "./pages/StaffDashboardPage";
+import { StaffTicketPage } from "./pages/StaffTicketPage";
 
 export default function App() {
   return (
@@ -27,6 +28,7 @@ export default function App() {
           path="/staff/dashboard"
           element={<StaffDashboardPage />}
         />
+        <Route path="/staff/tickets/:ticketId" element={<StaffTicketPage />} />
       </Route>
 
       <Route path="*" element={<Navigate to="/" replace />} />

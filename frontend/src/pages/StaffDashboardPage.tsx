@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { Link } from "react-router-dom";
 
 import { ApiError, assignTicket, listTickets } from "../api/client";
 import { useAuth } from "../auth/AuthContext";
@@ -194,7 +195,9 @@ export function StaffDashboardPage() {
                         {ticket.priority} priority
                       </span>
                     </div>
-                    <h3>{ticket.title}</h3>
+                    <h3>
+                      <Link to={`/staff/tickets/${ticket.id}`}>{ticket.title}</Link>
+                    </h3>
                     <p>{ticket.description}</p>
                     <div className="queue-ticket-meta">
                       <span>Ticket #{ticket.id}</span>
@@ -232,6 +235,9 @@ export function StaffDashboardPage() {
                         {ticket.assignee_id === null ? "Not active" : "Owned"}
                       </span>
                     )}
+                    <Link className="queue-view-link" to={`/staff/tickets/${ticket.id}`}>
+                      Open ticket
+                    </Link>
                   </div>
                 </article>
               );
