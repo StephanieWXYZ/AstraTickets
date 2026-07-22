@@ -3,14 +3,14 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy import select
-from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.api.dependencies import CurrentUser
-from app.core.security import create_access_token, hash_password, verify_password
+from app.core.security import create_access_token, verify_password
 from app.db.session import get_db
 from app.models import User
 from app.schemas import Token, UserCreate, UserRead
+from app.services import EmailAlreadyRegisteredError, create_user
 
 router = APIRouter(prefix="/auth", tags=["authentication"])
 
@@ -20,25 +20,10 @@ def register_user(
     user_data: UserCreate,
     session: Annotated[Session, Depends(get_db)],
 ) -> User:
-    email = user_data.email.lower()
-    existing_user = session.scalar(select(User).where(User.email == email))
-    if existing_user is not None:
-        raise HTTPException(status_code=409, detail="Email is already registered")
-
-    user = User(
-        email=email,
-        password_hash=hash_password(user_data.password),
-        full_name=user_data.full_name,
-    )
-    session.add(user)
     try:
-        session.commit()
-    except IntegrityError:
-        session.rollback()
+        return create_user(session, user_data)
+    except EmailAlreadyRegisteredError:
         raise HTTPException(status_code=409, detail="Email is already registered")
-
-    session.refresh(user)
-    return user
 
 
 @router.post("/login", response_model=Token)

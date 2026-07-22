@@ -42,6 +42,19 @@ Current authentication endpoints are available under `/api/auth`:
 - `POST /login` returns a JWT access token.
 - `GET /me` returns the authenticated user.
 
+Public registration creates customer accounts only. Create a staff account from
+the backend directory after applying the database migrations:
+
+```bash
+../.venv/bin/python -m app.cli create-staff \
+  --email agent@example.com \
+  --full-name "Support Agent" \
+  --role agent
+```
+
+The command securely prompts for the password. Use `--role admin` to create an
+administrator. Administrators can list active staff through `GET /api/users/staff`.
+
 Current ticket endpoints are available under `/api/tickets`:
 
 - `POST /api/tickets` creates a customer ticket.

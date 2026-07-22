@@ -20,6 +20,9 @@ dependencies = [
     "uvicorn[standard]>=0.35,<1.0",
 ]
 
+[project.scripts]
+astratickets = "app.cli:main"
+
 [project.optional-dependencies]
 dev = [
     "httpx>=0.28,<1.0",
