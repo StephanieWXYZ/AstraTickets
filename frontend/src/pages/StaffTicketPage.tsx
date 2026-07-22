@@ -6,11 +6,12 @@ import {
   assignTicket,
   createTicketReply,
   getTicket,
+  listActiveStaff,
   listTicketReplies,
   updateTicketStatus,
 } from "../api/client";
 import { useAuth } from "../auth/AuthContext";
-import type { Ticket, TicketReply, TicketStatus } from "../types";
+import type { Ticket, TicketReply, TicketStatus, User } from "../types";
 
 const statusTransitions: Record<TicketStatus, TicketStatus[]> = {
   open: ["in_progress", "resolved", "closed"],
@@ -47,6 +48,10 @@ export function StaffTicketPage() {
   const [nextStatus, setNextStatus] = useState<TicketStatus | "">("");
   const [workflowError, setWorkflowError] = useState("");
   const [isUpdating, setIsUpdating] = useState(false);
+  const [staff, setStaff] = useState<User[]>([]);
+  const [staffError, setStaffError] = useState("");
+  const [isStaffLoading, setIsStaffLoading] = useState(false);
+  const [selectedAssignee, setSelectedAssignee] = useState("");
 
   const loadTicket = useCallback(async () => {
     if (!token || !Number.isInteger(numericTicketId) || numericTicketId < 1) {
@@ -79,11 +84,43 @@ export function StaffTicketPage() {
     void loadTicket();
   }, [loadTicket]);
 
+  useEffect(() => {
+    if (!token || user?.role !== "admin") return;
+
+    let active = true;
+    setIsStaffLoading(true);
+    setStaffError("");
+    listActiveStaff(token)
+      .then((staffMembers) => {
+        if (active) setStaff(staffMembers);
+      })
+      .catch((error) => {
+        if (!active) return;
+        setStaffError(
+          error instanceof ApiError
+            ? error.message
+            : "We could not load the staff directory. Please try again.",
+        );
+      })
+      .finally(() => {
+        if (active) setIsStaffLoading(false);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [token, user?.role]);
+
   const isAssignedToMe = ticket?.assignee_id === user?.id;
   const canManageWorkflow = user?.role === "admin" || isAssignedToMe;
   const canReply =
     ticket?.status !== "closed" &&
     (user?.role === "admin" || isAssignedToMe);
+  const assignmentIsUnchanged =
+    selectedAssignee !== "" &&
+    (selectedAssignee === "unassigned"
+      ? ticket?.assignee_id === null
+      : Number(selectedAssignee) === ticket?.assignee_id);
 
   async function handleReply(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -113,6 +150,7 @@ export function StaffTicketPage() {
       const updatedTicket = await assignTicket(token, ticket.id, assigneeId);
       setTicket(updatedTicket);
       setNextStatus("");
+      setSelectedAssignee("");
     } catch (error) {
       setWorkflowError(
         error instanceof ApiError
@@ -122,6 +160,14 @@ export function StaffTicketPage() {
     } finally {
       setIsUpdating(false);
     }
+  }
+
+  function handleAdminAssignment(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (selectedAssignee === "" || assignmentIsUnchanged) return;
+    const assigneeId =
+      selectedAssignee === "unassigned" ? null : Number(selectedAssignee);
+    void handleAssignment(assigneeId);
   }
 
   async function handleStatusUpdate(event: FormEvent<HTMLFormElement>) {
@@ -263,35 +309,79 @@ export function StaffTicketPage() {
                         ? "Unassigned"
                         : isAssignedToMe
                           ? "Assigned to you"
-                          : "Assigned to another teammate"}
+                          : staff.find((member) => member.id === ticket.assignee_id)?.full_name ??
+                            "Assigned to another teammate"}
                     </dd>
                   </div>
                 </dl>
 
                 {workflowError && <div className="form-error" role="alert">{workflowError}</div>}
+                {staffError && <div className="form-error" role="alert">{staffError}</div>}
 
-                <div className="assignment-controls">
-                  {ticket.assignee_id === null && ticket.status !== "resolved" && ticket.status !== "closed" && (
-                    <button
-                      className="button button-primary"
-                      type="button"
-                      disabled={isUpdating}
-                      onClick={() => user && void handleAssignment(user.id)}
-                    >
-                      Claim ticket
-                    </button>
-                  )}
-                  {isAssignedToMe && ticket.status !== "resolved" && ticket.status !== "closed" && (
-                    <button
-                      className="button button-quiet"
-                      type="button"
-                      disabled={isUpdating}
-                      onClick={() => void handleAssignment(null)}
-                    >
-                      Release ticket
-                    </button>
-                  )}
-                </div>
+                {user?.role === "admin" ? (
+                  ticket.status === "resolved" || ticket.status === "closed" ? (
+                    <p className="workflow-note">
+                      Reopen this ticket before changing its assignment.
+                    </p>
+                  ) : (
+                    <form className="assignment-form" onSubmit={handleAdminAssignment}>
+                      <label>
+                        Assign ticket
+                        <select
+                          required
+                          value={selectedAssignee}
+                          disabled={isStaffLoading}
+                          onChange={(event) => setSelectedAssignee(event.target.value)}
+                        >
+                          <option value="">
+                            {isStaffLoading ? "Loading staff…" : "Choose assignment"}
+                          </option>
+                          <option value="unassigned">Unassigned queue</option>
+                          {staff.map((member) => (
+                            <option value={member.id} key={member.id}>
+                              {member.full_name} · {member.role}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+                      <button
+                        className="button button-primary"
+                        type="submit"
+                        disabled={
+                          isUpdating ||
+                          isStaffLoading ||
+                          selectedAssignee === "" ||
+                          assignmentIsUnchanged
+                        }
+                      >
+                        {isUpdating ? "Assigning…" : "Update assignment"}
+                      </button>
+                    </form>
+                  )
+                ) : (
+                  <div className="assignment-controls">
+                    {ticket.assignee_id === null && ticket.status !== "resolved" && ticket.status !== "closed" && (
+                      <button
+                        className="button button-primary"
+                        type="button"
+                        disabled={isUpdating}
+                        onClick={() => user && void handleAssignment(user.id)}
+                      >
+                        Claim ticket
+                      </button>
+                    )}
+                    {isAssignedToMe && ticket.status !== "resolved" && ticket.status !== "closed" && (
+                      <button
+                        className="button button-quiet"
+                        type="button"
+                        disabled={isUpdating}
+                        onClick={() => void handleAssignment(null)}
+                      >
+                        Release ticket
+                      </button>
+                    )}
+                  </div>
+                )}
 
                 {canManageWorkflow ? (
                   <form className="status-form" onSubmit={handleStatusUpdate}>

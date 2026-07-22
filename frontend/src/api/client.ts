@@ -155,3 +155,9 @@ export function updateTicketStatus(
     body: JSON.stringify({ status }),
   });
 }
+
+export function listActiveStaff(token: string): Promise<User[]> {
+  return request<User[]>("/api/users/staff", {
+    headers: authorizationHeader(token),
+  });
+}
