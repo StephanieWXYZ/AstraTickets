@@ -12,6 +12,8 @@ class Settings(BaseSettings):
         min_length=32,
     )
     access_token_expire_minutes: int = Field(default=30, gt=0)
+    chroma_path: str = "./chroma_data"
+    embedding_model: str = "sentence-transformers/all-MiniLM-L6-v2"
 
     model_config = SettingsConfigDict(
         env_file=".env",

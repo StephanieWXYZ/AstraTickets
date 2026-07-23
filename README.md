@@ -66,6 +66,20 @@ Current ticket endpoints are available under `/api/tickets`:
 - `GET /api/tickets/{ticket_id}/replies` lists the ticket conversation.
 - `POST /api/tickets/{ticket_id}/replies` adds an authenticated reply.
 
+## Local knowledge retrieval
+
+AstraTickets stores knowledge-base chunks locally in ChromaDB and creates
+semantic embeddings with `sentence-transformers/all-MiniLM-L6-v2`. The model is
+downloaded on first use and then loaded from the local model cache.
+
+- `POST /api/knowledge/documents` lets administrators ingest an English document.
+- `POST /api/knowledge/search` lets staff retrieve relevant chunks with titles,
+  source identifiers, source locations, similarity scores, and measured retrieval
+  latency.
+
+ChromaDB data is written to `backend/chroma_data` by default and is excluded
+from version control. Configure another location with `CHROMA_PATH`.
+
 Run the backend tests from the `backend` directory:
 
 ```bash
