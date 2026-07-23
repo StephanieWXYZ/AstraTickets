@@ -14,6 +14,11 @@ class Settings(BaseSettings):
     access_token_expire_minutes: int = Field(default=30, gt=0)
     chroma_path: str = "./chroma_data"
     embedding_model: str = "sentence-transformers/all-MiniLM-L6-v2"
+    knowledge_min_score: float = Field(default=0.4, ge=0, le=1)
+    llm_base_url: str | None = None
+    llm_model: str | None = None
+    llm_api_key: str | None = None
+    llm_timeout_seconds: float = Field(default=30, gt=0, le=120)
 
     model_config = SettingsConfigDict(
         env_file=".env",

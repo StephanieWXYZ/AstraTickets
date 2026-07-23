@@ -80,6 +80,17 @@ downloaded on first use and then loaded from the local model cache.
 ChromaDB data is written to `backend/chroma_data` by default and is excluded
 from version control. Configure another location with `CHROMA_PATH`.
 
+Configure an OpenAI-compatible generation service entirely through backend
+environment variables: `LLM_BASE_URL`, `LLM_MODEL`, and, when required,
+`LLM_API_KEY`. Provider credentials are never accepted from the browser.
+
+`POST /api/tickets/{ticket_id}/ai-draft` gives an assigned agent or
+administrator a review-only reply draft. The service refuses before generation
+when retrieval finds no sufficiently relevant evidence. Generated drafts must
+cite available evidence with markers such as `[1]`; uncited or invented source
+numbers are rejected. The response includes the exact cited chunks as structured
+source records, and never sends the draft to the customer automatically.
+
 Run the backend tests from the `backend` directory:
 
 ```bash
