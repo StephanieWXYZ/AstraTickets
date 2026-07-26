@@ -1,4 +1,5 @@
 import type {
+  AIDraft,
   CreateTicketInput,
   RegisterInput,
   Ticket,
@@ -123,6 +124,20 @@ export function createTicketReply(
       "Content-Type": "application/json",
     },
     body: JSON.stringify({ content }),
+  });
+}
+
+export function createAIDraft(
+  token: string,
+  ticketId: number,
+): Promise<AIDraft> {
+  return request<AIDraft>(`/api/tickets/${ticketId}/ai-draft`, {
+    method: "POST",
+    headers: {
+      ...authorizationHeader(token),
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({}),
   });
 }
 

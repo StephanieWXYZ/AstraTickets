@@ -4,6 +4,7 @@ import { Link, useParams } from "react-router-dom";
 import {
   ApiError,
   assignTicket,
+  createAIDraft,
   createTicketReply,
   getTicket,
   listActiveStaff,
@@ -11,7 +12,7 @@ import {
   updateTicketStatus,
 } from "../api/client";
 import { useAuth } from "../auth/AuthContext";
-import type { Ticket, TicketReply, TicketStatus, User } from "../types";
+import type { AIDraft, Ticket, TicketReply, TicketStatus, User } from "../types";
 
 const statusTransitions: Record<TicketStatus, TicketStatus[]> = {
   open: ["in_progress", "resolved", "closed"],
@@ -45,6 +46,9 @@ export function StaffTicketPage() {
   const [reply, setReply] = useState("");
   const [replyError, setReplyError] = useState("");
   const [isReplying, setIsReplying] = useState(false);
+  const [aiDraft, setAiDraft] = useState<AIDraft | null>(null);
+  const [aiDraftError, setAiDraftError] = useState("");
+  const [isDrafting, setIsDrafting] = useState(false);
   const [nextStatus, setNextStatus] = useState<TicketStatus | "">("");
   const [workflowError, setWorkflowError] = useState("");
   const [isUpdating, setIsUpdating] = useState(false);
@@ -69,6 +73,8 @@ export function StaffTicketPage() {
       setTicket(loadedTicket);
       setReplies(loadedReplies);
       setNextStatus("");
+      setAiDraft(null);
+      setAiDraftError("");
     } catch (error) {
       setLoadError(
         error instanceof ApiError
@@ -140,6 +146,31 @@ export function StaffTicketPage() {
     } finally {
       setIsReplying(false);
     }
+  }
+
+  async function handleCreateDraft() {
+    if (!token || !ticket) return;
+    setIsDrafting(true);
+    setAiDraftError("");
+    try {
+      const draft = await createAIDraft(token, ticket.id);
+      setAiDraft(draft);
+    } catch (error) {
+      setAiDraft(null);
+      setAiDraftError(
+        error instanceof ApiError
+          ? error.message
+          : "We could not create an AI draft. Please try again.",
+      );
+    } finally {
+      setIsDrafting(false);
+    }
+  }
+
+  function useDraft() {
+    if (!aiDraft || aiDraft.status !== "answered") return;
+    setReply(aiDraft.answer);
+    setReplyError("");
   }
 
   async function handleAssignment(assigneeId: number | null) {
@@ -266,23 +297,91 @@ export function StaffTicketPage() {
 
                 <div className="staff-reply-area">
                   {canReply ? (
-                    <form onSubmit={handleReply}>
-                      <label>
-                        Reply to customer
-                        <textarea
-                          required
-                          maxLength={5000}
-                          rows={6}
-                          value={reply}
-                          onChange={(event) => setReply(event.target.value)}
-                          placeholder="Write a clear, helpful response."
-                        />
-                      </label>
-                      {replyError && <div className="form-error" role="alert">{replyError}</div>}
-                      <button className="button button-primary" type="submit" disabled={isReplying}>
-                        {isReplying ? "Sending reply…" : "Send reply"}
-                      </button>
-                    </form>
+                    <>
+                      <section className="ai-draft-panel" aria-labelledby="ai-draft-title">
+                        <div className="ai-draft-heading">
+                          <div>
+                            <span className="ai-label">AI assistant</span>
+                            <h2 id="ai-draft-title">Prepare a grounded reply</h2>
+                          </div>
+                          <span className="draft-badge">Draft only</span>
+                        </div>
+                        <p className="ai-draft-description">
+                          The assistant uses the knowledge base and shows the sources behind its answer.
+                        </p>
+                        <button
+                          className="button button-quiet"
+                          type="button"
+                          disabled={isDrafting}
+                          onClick={() => void handleCreateDraft()}
+                        >
+                          {isDrafting
+                            ? "Checking the knowledge base…"
+                            : aiDraft
+                              ? "Generate another draft"
+                              : "Generate AI draft"}
+                        </button>
+
+                        {aiDraftError && (
+                          <div className="form-error ai-draft-error" role="alert">
+                            {aiDraftError}
+                          </div>
+                        )}
+
+                        {aiDraft && (
+                          <div className="ai-draft-result" aria-live="polite">
+                            <p className="ai-draft-answer">{aiDraft.answer}</p>
+                            {aiDraft.status === "answered" && (
+                              <>
+                                <div className="ai-source-list">
+                                  <h3>Sources used</h3>
+                                  {aiDraft.sources.map((source) => (
+                                    <details className="ai-source" key={source.chunk_id}>
+                                      <summary>
+                                        <span>[{source.reference}] {source.title}</span>
+                                        <span>{Math.round(source.score * 100)}% match</span>
+                                      </summary>
+                                      <p>{source.text}</p>
+                                      <small>{source.source}</small>
+                                    </details>
+                                  ))}
+                                </div>
+                                <div className="ai-draft-actions">
+                                  <button
+                                    className="button button-primary"
+                                    type="button"
+                                    onClick={useDraft}
+                                  >
+                                    Use this draft
+                                  </button>
+                                  <span>
+                                    Knowledge search: {aiDraft.retrieval_ms.toFixed(1)} ms
+                                  </span>
+                                </div>
+                              </>
+                            )}
+                          </div>
+                        )}
+                      </section>
+
+                      <form onSubmit={handleReply}>
+                        <label>
+                          Reply to customer
+                          <textarea
+                            required
+                            maxLength={5000}
+                            rows={6}
+                            value={reply}
+                            onChange={(event) => setReply(event.target.value)}
+                            placeholder="Write a clear, helpful response."
+                          />
+                        </label>
+                        {replyError && <div className="form-error" role="alert">{replyError}</div>}
+                        <button className="button button-primary" type="submit" disabled={isReplying}>
+                          {isReplying ? "Sending reply…" : "Send reply"}
+                        </button>
+                      </form>
+                    </>
                   ) : (
                     <div className="closed-notice">
                       {ticket.status === "closed"

@@ -63,3 +63,23 @@ export interface TicketReply {
   created_at: string;
   author: TicketReplyAuthor;
 }
+
+export interface AISource {
+  reference: number;
+  chunk_id: string;
+  text: string;
+  source_id: string;
+  source: string;
+  title: string;
+  chunk_index: number;
+  score: number;
+}
+
+export interface AIDraft {
+  ticket_id: number;
+  status: "answered" | "insufficient_context";
+  answer: string;
+  sources: AISource[];
+  retrieval_ms: number;
+  draft_only: true;
+}

@@ -873,6 +873,126 @@ textarea:focus {
   background: #fbfcfa;
 }
 
+.ai-draft-panel {
+  margin-bottom: 28px;
+  border: 1px solid #b9ddcd;
+  border-radius: 16px;
+  padding: 20px;
+  background: #f1f8f5;
+}
+
+.ai-draft-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 18px;
+}
+
+.ai-label,
+.draft-badge {
+  color: #246a51;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.ai-draft-heading h2 {
+  margin: 5px 0 0;
+  color: var(--navy);
+  font-size: 20px;
+}
+
+.draft-badge {
+  flex: 0 0 auto;
+  border: 1px solid #a7d1bf;
+  border-radius: 999px;
+  padding: 6px 9px;
+  background: #fff;
+}
+
+.ai-draft-description {
+  margin: 12px 0 16px;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+.ai-draft-error {
+  margin-top: 16px;
+}
+
+.ai-draft-result {
+  margin-top: 18px;
+  border-top: 1px solid #c6dfd4;
+  padding-top: 18px;
+}
+
+.ai-draft-answer {
+  margin: 0;
+  color: var(--navy);
+  white-space: pre-wrap;
+  line-height: 1.65;
+}
+
+.ai-source-list {
+  display: grid;
+  gap: 8px;
+  margin-top: 20px;
+}
+
+.ai-source-list h3 {
+  margin: 0 0 2px;
+  color: var(--navy);
+  font-size: 13px;
+}
+
+.ai-source {
+  border: 1px solid #d3e5dd;
+  border-radius: 10px;
+  padding: 10px 12px;
+  background: #fff;
+}
+
+.ai-source summary {
+  display: flex;
+  cursor: pointer;
+  justify-content: space-between;
+  gap: 16px;
+  color: var(--navy);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.ai-source summary span:last-child {
+  flex: 0 0 auto;
+  color: #39775f;
+}
+
+.ai-source p {
+  margin: 12px 0 6px;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.55;
+}
+
+.ai-source small {
+  color: #71817b;
+}
+
+.ai-draft-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-top: 18px;
+}
+
+.ai-draft-actions span {
+  color: var(--muted);
+  font-size: 11px;
+}
+
 .workflow-panel {
   position: sticky;
   top: 24px;
@@ -1075,6 +1195,13 @@ textarea:focus {
 
   .staff-reply-area {
     padding: 24px 22px;
+  }
+
+  .ai-draft-heading,
+  .ai-draft-actions,
+  .ai-source summary {
+    align-items: flex-start;
+    flex-direction: column;
   }
 }
 
