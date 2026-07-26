@@ -52,9 +52,16 @@ class FakeDraftService:
     def __init__(self, draft: GroundedDraft) -> None:
         self.draft_result = draft
         self.questions: list[str] = []
+        self.contexts: list[str | None] = []
 
-    def draft(self, question: str, _limit: int = 4) -> GroundedDraft:
+    def draft(
+        self,
+        question: str,
+        _limit: int = 4,
+        conversation_context: str | None = None,
+    ) -> GroundedDraft:
         self.questions.append(question)
+        self.contexts.append(conversation_context)
         return self.draft_result
 
 
@@ -68,6 +75,23 @@ def test_grounded_service_returns_only_cited_sources() -> None:
     assert draft.sources[0].reference == 1
     assert draft.sources[0].source == "password-reset.md"
     assert "Use only the numbered evidence" in generator.prompts[0]
+
+
+def test_grounded_service_includes_conversation_context_in_prompt() -> None:
+    generator = FakeGenerator("Request another reset link [1].")
+    service = GroundedAnswerService(FakeStore([knowledge_match()]), generator)
+
+    service.draft(
+        "The first link expired. What should I do now?",
+        conversation_context=(
+            "Customer: My login link does not work.\n"
+            "Support: Please request a new link.\n"
+            "Customer: The first link expired. What should I do now?"
+        ),
+    )
+
+    assert "TICKET CONVERSATION" in generator.prompts[0]
+    assert "Support: Please request a new link." in generator.prompts[0]
 
 
 def test_openai_compatible_generator_reads_chat_completion() -> None:
@@ -191,6 +215,47 @@ def test_assigned_agent_can_request_grounded_draft(
     assert data["sources"][0]["title"] == "Password Reset Policy"
     assert data["retrieval_ms"] == 1.3
     assert "Expired password reset link" in service.questions[0]
+    assert "Customer: I need help resolving this support request." in service.contexts[0]
+
+
+def test_ai_draft_uses_latest_customer_reply_and_full_conversation(
+    client: TestClient,
+    session_factory: sessionmaker[Session],
+) -> None:
+    customer_token = register_and_login(client)
+    ticket = create_ticket(client, customer_token, "Password reset help")
+    agent_token = create_staff_token(session_factory)
+    claim_ticket(client, agent_token, ticket["id"])
+    customer_reply = "The replacement link also expired. What should I do now?"
+    customer_response = client.post(
+        f"/api/tickets/{ticket['id']}/replies",
+        headers={"Authorization": f"Bearer {customer_token}"},
+        json={"content": customer_reply},
+    )
+    assert customer_response.status_code == 201
+    agent_response = client.post(
+        f"/api/tickets/{ticket['id']}/replies",
+        headers={"Authorization": f"Bearer {agent_token}"},
+        json={"content": "I will check the reset policy for you."},
+    )
+    assert agent_response.status_code == 201
+    service = FakeDraftService(
+        GroundedDraft("insufficient_context", REFUSAL_MESSAGE, [], 0.1)
+    )
+    app.dependency_overrides[get_grounded_answer_service] = lambda: service
+    try:
+        response = client.post(
+            f"/api/tickets/{ticket['id']}/ai-draft",
+            headers={"Authorization": f"Bearer {agent_token}"},
+            json={},
+        )
+    finally:
+        app.dependency_overrides.pop(get_grounded_answer_service, None)
+
+    assert response.status_code == 200
+    assert service.questions == [customer_reply]
+    assert "Support: I will check the reset policy for you." in service.contexts[0]
+    assert f"Customer: {customer_reply}" in service.contexts[0]
 
 
 def test_unassigned_agent_cannot_request_ai_draft(

@@ -1,7 +1,10 @@
 from pydantic import BaseModel, ConfigDict, Field, StringConstraints
 from typing import Annotated
 
-DocumentText = Annotated[str, StringConstraints(strip_whitespace=True, min_length=20)]
+DocumentText = Annotated[
+    str,
+    StringConstraints(strip_whitespace=True, min_length=20, max_length=1_000_000),
+]
 ShortText = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=500)]
 
 

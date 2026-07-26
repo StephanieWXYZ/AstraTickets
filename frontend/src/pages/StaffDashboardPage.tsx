@@ -106,6 +106,9 @@ export function StaffDashboardPage() {
           <span>AstraTickets</span>
         </div>
         <div className="account-actions">
+          {user?.role === "admin" && (
+            <Link className="header-link" to="/staff/knowledge">Knowledge base</Link>
+          )}
           <span className="account-name">{user?.full_name} · {user?.role}</span>
           <button className="button button-quiet" type="button" onClick={signOut}>
             Sign out

@@ -4,6 +4,7 @@ import { ProtectedRoute } from "./auth/ProtectedRoute";
 import { CustomerDashboardPage } from "./pages/CustomerDashboardPage";
 import { CustomerTicketPage } from "./pages/CustomerTicketPage";
 import { LoginPage } from "./pages/LoginPage";
+import { KnowledgeBasePage } from "./pages/KnowledgeBasePage";
 import { RegisterPage } from "./pages/RegisterPage";
 import { StaffDashboardPage } from "./pages/StaffDashboardPage";
 import { StaffTicketPage } from "./pages/StaffTicketPage";
@@ -29,6 +30,10 @@ export default function App() {
           element={<StaffDashboardPage />}
         />
         <Route path="/staff/tickets/:ticketId" element={<StaffTicketPage />} />
+      </Route>
+
+      <Route element={<ProtectedRoute allowedRoles={["admin"]} />}>
+        <Route path="/staff/knowledge" element={<KnowledgeBasePage />} />
       </Route>
 
       <Route path="*" element={<Navigate to="/" replace />} />

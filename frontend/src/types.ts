@@ -83,3 +83,30 @@ export interface AIDraft {
   retrieval_ms: number;
   draft_only: true;
 }
+
+export interface KnowledgeDocumentInput {
+  title: string;
+  source: string;
+  text: string;
+}
+
+export interface KnowledgeDocumentResult {
+  source_id: string;
+  chunks_added: number;
+}
+
+export interface KnowledgeMatch {
+  chunk_id: string;
+  text: string;
+  source_id: string;
+  source: string;
+  title: string;
+  chunk_index: number;
+  score: number;
+}
+
+export interface KnowledgeSearchResult {
+  query: string;
+  matches: KnowledgeMatch[];
+  retrieval_ms: number;
+}

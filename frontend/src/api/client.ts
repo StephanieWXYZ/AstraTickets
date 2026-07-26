@@ -1,6 +1,9 @@
 import type {
   AIDraft,
   CreateTicketInput,
+  KnowledgeDocumentInput,
+  KnowledgeDocumentResult,
+  KnowledgeSearchResult,
   RegisterInput,
   Ticket,
   TicketPage,
@@ -174,5 +177,33 @@ export function updateTicketStatus(
 export function listActiveStaff(token: string): Promise<User[]> {
   return request<User[]>("/api/users/staff", {
     headers: authorizationHeader(token),
+  });
+}
+
+export function addKnowledgeDocument(
+  token: string,
+  input: KnowledgeDocumentInput,
+): Promise<KnowledgeDocumentResult> {
+  return request<KnowledgeDocumentResult>("/api/knowledge/documents", {
+    method: "POST",
+    headers: {
+      ...authorizationHeader(token),
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(input),
+  });
+}
+
+export function searchKnowledge(
+  token: string,
+  query: string,
+): Promise<KnowledgeSearchResult> {
+  return request<KnowledgeSearchResult>("/api/knowledge/search", {
+    method: "POST",
+    headers: {
+      ...authorizationHeader(token),
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ query, limit: 5 }),
   });
 }

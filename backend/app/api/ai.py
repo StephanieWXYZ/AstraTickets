@@ -1,6 +1,7 @@
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.ai import GroundedAnswerService, UngroundedAnswerError
@@ -10,7 +11,7 @@ from app.api.knowledge import get_knowledge_store
 from app.api.tickets import get_visible_ticket
 from app.core.config import get_settings
 from app.db.session import get_db
-from app.models import TicketStatus, UserRole
+from app.models import TicketReply, TicketStatus, UserRole
 from app.rag import KnowledgeBaseStore
 from app.schemas import AIDraftRequest, AIDraftResponse, AISource
 
@@ -37,6 +38,21 @@ def get_grounded_answer_service(
 GroundedService = Annotated[GroundedAnswerService, Depends(get_grounded_answer_service)]
 
 
+def build_conversation_context(
+    ticket_title: str,
+    ticket_description: str,
+    replies: list[TicketReply],
+) -> str:
+    lines = [
+        f"Ticket title: {ticket_title}",
+        f"Customer: {ticket_description}",
+    ]
+    for reply in replies:
+        speaker = "Customer" if reply.author.role == UserRole.CUSTOMER else "Support"
+        lines.append(f"{speaker}: {reply.content}")
+    return "\n".join(lines)
+
+
 @router.post("/{ticket_id}/ai-draft", response_model=AIDraftResponse)
 def draft_ticket_reply(
     ticket_id: int,
@@ -59,9 +75,37 @@ def draft_ticket_reply(
             detail="Closed tickets must be reopened before drafting a reply",
         )
 
-    question = request.question or f"{ticket.title}\n\n{ticket.description}"
+    replies = list(
+        session.scalars(
+            select(TicketReply)
+            .where(TicketReply.ticket_id == ticket.id)
+            .order_by(TicketReply.created_at, TicketReply.id)
+        )
+    )
+    latest_customer_reply = next(
+        (
+            reply
+            for reply in reversed(replies)
+            if reply.author.role == UserRole.CUSTOMER
+        ),
+        None,
+    )
+    question = request.question or (
+        latest_customer_reply.content
+        if latest_customer_reply
+        else f"{ticket.title}\n\n{ticket.description}"
+    )
+    conversation_context = build_conversation_context(
+        ticket.title,
+        ticket.description,
+        replies,
+    )
     try:
-        draft = service.draft(question, request.limit)
+        draft = service.draft(
+            question,
+            request.limit,
+            conversation_context=conversation_context,
+        )
     except GenerationUnavailableError as error:
         raise HTTPException(status_code=503, detail=str(error)) from error
     except UngroundedAnswerError as error:
