@@ -1,9 +1,10 @@
 from datetime import datetime
 from typing import Annotated
 
-from pydantic import BaseModel, ConfigDict, StringConstraints
+from pydantic import BaseModel, ConfigDict, StringConstraints, field_validator
 
 from app.models import UserRole
+from app.schemas.common import as_utc
 
 ReplyContent = Annotated[
     str,
@@ -34,3 +35,11 @@ class TicketReplyRead(BaseModel):
     content: str
     created_at: datetime
     author: TicketReplyAuthor
+
+    @field_validator("created_at", mode="before")
+    @classmethod
+    def mark_timestamp_as_utc(cls, value: datetime) -> datetime:
+        timestamp = as_utc(value)
+        if timestamp is None:
+            raise ValueError("Reply timestamp is required")
+        return timestamp

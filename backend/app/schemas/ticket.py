@@ -1,9 +1,17 @@
 from datetime import datetime
 from typing import Annotated
 
-from pydantic import BaseModel, ConfigDict, Field, StringConstraints, model_validator
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    Field,
+    StringConstraints,
+    field_validator,
+    model_validator,
+)
 
 from app.models import TicketPriority, TicketStatus
+from app.schemas.common import as_utc
 
 TicketTitle = Annotated[
     str,
@@ -41,6 +49,11 @@ class TicketRead(BaseModel):
     created_at: datetime
     updated_at: datetime
     resolved_at: datetime | None
+
+    @field_validator("created_at", "updated_at", "resolved_at", mode="before")
+    @classmethod
+    def mark_timestamps_as_utc(cls, value: datetime | None) -> datetime | None:
+        return as_utc(value)
 
 
 class TicketUpdate(BaseModel):

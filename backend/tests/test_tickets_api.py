@@ -19,6 +19,8 @@ def test_customer_creates_ticket(client: TestClient) -> None:
     assert ticket["status"] == "open"
     assert ticket["priority"] == "high"
     assert ticket["assignee_id"] is None
+    assert ticket["created_at"].endswith(("Z", "+00:00"))
+    assert ticket["updated_at"].endswith(("Z", "+00:00"))
 
 
 def test_ticket_creation_requires_authentication(client: TestClient) -> None:
@@ -65,6 +67,7 @@ def test_customer_lists_only_own_tickets(client: TestClient) -> None:
     assert response.status_code == 200
     assert response.json()["total"] == 1
     assert response.json()["items"][0]["title"] == "First customer ticket"
+    assert response.json()["items"][0]["created_at"].endswith(("Z", "+00:00"))
 
 
 def test_agent_lists_and_filters_support_queue(

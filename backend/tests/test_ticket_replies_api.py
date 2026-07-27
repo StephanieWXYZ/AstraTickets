@@ -39,6 +39,7 @@ def test_customer_reply_uses_authenticated_author(client: TestClient) -> None:
     assert reply["author_id"] == decode_access_token(customer_token)
     assert reply["author"]["role"] == "customer"
     assert reply["author"]["full_name"] == "Astra Customer"
+    assert reply["created_at"].endswith(("Z", "+00:00"))
 
 
 def test_reply_rejects_client_supplied_author(client: TestClient) -> None:
@@ -79,6 +80,10 @@ def test_conversation_lists_customer_and_assigned_agent_replies(
         "customer",
         "agent",
     ]
+    assert all(
+        reply["created_at"].endswith(("Z", "+00:00"))
+        for reply in response.json()
+    )
 
 
 def test_unassigned_agent_cannot_reply(
