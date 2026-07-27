@@ -15,6 +15,10 @@ class Settings(BaseSettings):
     chroma_path: str = "./chroma_data"
     embedding_model: str = "sentence-transformers/all-MiniLM-L6-v2"
     knowledge_min_score: float = Field(default=0.4, ge=0, le=1)
+    cors_origins: str = "http://localhost:5173"
+    initial_admin_email: str | None = None
+    initial_admin_password: str | None = None
+    initial_admin_name: str = "AstraTickets Administrator"
     llm_base_url: str | None = None
     llm_model: str | None = None
     llm_api_key: str | None = None
@@ -25,6 +29,14 @@ class Settings(BaseSettings):
         env_file_encoding="utf-8",
         extra="ignore",
     )
+
+    @property
+    def allowed_origins(self) -> list[str]:
+        return [
+            origin.strip()
+            for origin in self.cors_origins.split(",")
+            if origin.strip()
+        ]
 
 
 @lru_cache

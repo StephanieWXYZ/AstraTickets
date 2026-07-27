@@ -4,6 +4,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.db.base import Base
+from app.db.url import normalize_database_url
 from app.models import User, UserRole
 
 
@@ -50,3 +51,9 @@ def test_user_email_must_be_unique(session: Session) -> None:
 
     with pytest.raises(IntegrityError):
         session.commit()
+
+
+def test_neon_database_url_uses_psycopg_driver() -> None:
+    assert normalize_database_url(
+        "postgresql://user:password@example.neon.tech/database"
+    ) == "postgresql+psycopg://user:password@example.neon.tech/database"

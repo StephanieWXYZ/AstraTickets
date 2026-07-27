@@ -36,3 +36,26 @@ def create_user(
 
     session.refresh(user)
     return user
+
+
+def ensure_initial_admin(session: Session) -> User | None:
+    from app.core.config import get_settings
+
+    settings = get_settings()
+    if not settings.initial_admin_email or not settings.initial_admin_password:
+        return None
+
+    email = settings.initial_admin_email.lower()
+    existing_user = session.scalar(select(User).where(User.email == email))
+    if existing_user is not None:
+        return existing_user
+
+    return create_user(
+        session,
+        UserCreate(
+            email=email,
+            password=settings.initial_admin_password,
+            full_name=settings.initial_admin_name,
+        ),
+        UserRole.ADMIN,
+    )

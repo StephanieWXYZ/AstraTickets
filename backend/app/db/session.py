@@ -4,11 +4,13 @@ from sqlalchemy import Engine, create_engine, event
 from sqlalchemy.orm import Session, sessionmaker
 
 from app.core.config import get_settings
+from app.db.url import normalize_database_url
 
 settings = get_settings()
 
 
 def create_database_engine(database_url: str) -> Engine:
+    database_url = normalize_database_url(database_url)
     connect_args = (
         {"check_same_thread": False}
         if database_url.startswith("sqlite")

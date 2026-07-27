@@ -4,6 +4,7 @@ from alembic import context
 from sqlalchemy import create_engine, pool
 
 from app.core.config import get_settings
+from app.db.url import normalize_database_url
 from app.models import User
 
 config = context.config
@@ -15,7 +16,10 @@ target_metadata = User.metadata
 
 
 def get_database_url() -> str:
-    return config.get_main_option("sqlalchemy.url") or get_settings().database_url
+    database_url = (
+        config.get_main_option("sqlalchemy.url") or get_settings().database_url
+    )
+    return normalize_database_url(database_url)
 
 
 def run_migrations_offline() -> None:
