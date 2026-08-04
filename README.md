@@ -6,6 +6,14 @@ answers into one workspace. Customers can create and follow tickets, while suppo
 teams manage assignments, status changes, replies, and grounded AI drafts with
 source references.
 
+## Demo
+
+[Watch the AstraTickets demo](https://youtu.be/TqRiW8OkLdo)
+
+[Open the deployed AstraTickets app](https://astratickets.onrender.com/)
+
+![AstraTickets customer-support workspace](docs/demo-screenshot.png)
+
 ## Highlights
 
 - Full-stack customer-support platform with React, FastAPI, and SQLAlchemy
